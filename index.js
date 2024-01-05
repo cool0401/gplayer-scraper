@@ -32,13 +32,6 @@ const save = async (appData) => {
         }));
     }
 
-    //if (appData.video) {
-        // Download and save video
-    //    const videoPath = join(folderPath, 'video.mp4');
-    //    await downloadFile(appData.video, videoPath);
-    //    console.log(`Downloaded and saved video: ${videoPath}`);
-    //}
-
     if (appData.videoImage) {
         // Download and save video image
         const imagePath = join(folderPath, 'video_image.jpg');
@@ -49,10 +42,26 @@ const save = async (appData) => {
 };
 
 // Initialize a set to store used appIDs
-const usedAppIds = new Set();
+let usedAppIds = new Set();
+
+// Read the content of unique_appIds.txt and populate the set
+const appIdsFilePath = 'unique_appIds.txt';
+if (fs.existsSync(appIdsFilePath)) {
+    const appIdsContent = fs.readFileSync(appIdsFilePath, 'utf-8');
+    const appIdsArray = appIdsContent.split('\n').map(appId => appId.trim());
+    usedAppIds = new Set(appIdsArray);
+}
 
 const writeLog = async (dataObject, usedWord) => {
-    const filePath = usedWord + '.json';
+    const subfolderPath = path.join(__dirname, 'keyword');
+    const filePath = path.join(__dirname, 'keyword', usedWord + '.json');
+    // Create the subfolder if it doesn't exist
+    try {
+        await fs.promises.mkdir(subfolderPath, { recursive: true });
+    } catch (mkdirError) {
+        console.error('Error creating subfolder:', mkdirError);
+        return;
+    }
     console.log(dataObject.length);
 
     // Filter the array to keep only unique items based on the app ID
@@ -69,7 +78,7 @@ const writeLog = async (dataObject, usedWord) => {
     const jsonString = JSON.stringify(uniqueDataObject, null, 2);
 
     for (let i = 0; i < uniqueDataObject.length; i++) {
-        await save(dataObject[i]);
+        await save(uniqueDataObject[i]);
     }
 
     fs.appendFile(filePath, jsonString, (err) => {
@@ -82,6 +91,10 @@ const writeLog = async (dataObject, usedWord) => {
 
     // Add the used word to the list
     usedWords.push(usedWord);
+
+    // Dump unique appIds to a file
+    fs.writeFileSync(appIdsFilePath, Array.from(usedAppIds).join('\n'));
+    console.log(`Unique appIds have been dumped to ${appIdsFilePath}`);
 };
 
 // Keep track of used words
@@ -97,7 +110,7 @@ const getUniqueRandomWord = () => {
 };
 
 // Specify the number of unique random words you want
-const numberOfUniqueWords = 200000;
+const numberOfUniqueWords = 2;
 
 // Use a while loop to generate and save unique random words
 let count = 0;
